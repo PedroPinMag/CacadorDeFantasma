@@ -5,33 +5,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fantasminha UFRRJ Tracker</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
      crossorigin=""/>
-    <style>
-        body { font-family: sans-serif; margin: 20px; }
-        #map { height: 500px; width: 100%; border: 1px solid #ccc; margin-top: 20px; }
-        .bus-title { font-size: 1.2em; margin-top: 10px; }
-        button { padding: 10px 15px; font-size: 1em; cursor: pointer; }
-        #statusMessage { margin-top: 15px; font-style: italic; }
-    </style>
+
+    <link rel="stylesheet" href="{% static 'public/css/styles.css' %}">
 </head>
 <body>
-    <h1>Localizador Fantasminha UFRRJ</h1>
+    <div class="content-wrapper"> <h1>Localizador Fantasminha</h1>
+        <button id="toggleLocationBtn">Ativar Localização</button>
+        <p id="userLocationStatus">Compartilhamento desativado.</p>
 
-    <button id="toggleLocationBtn">Ativar Compartilhamento de Localização</button>
-    <p id="userLocationStatus">Compartilhamento desativado.</p>
+        <p id="statusMessage">Verificando...</p>
+        <p id="warningMessage" class="warning-status" style="display: none;"></p>
 
-    <div id="busInfo">
-        <h2>Posições Atuais do Fantasminha:</h2>
-        <p id="statusMessage">Carregando...</p>
-        <div id="busTitlesContainer">
-            </div>
-    </div>
-
-    <div id="map"></div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        <div id="busInfo"> <h2>Fantasminhas Ativos</h2>
+            <div id="busTitlesContainer">
+                </div> </div> </div> <div id="map"></div> <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
 
@@ -39,39 +34,42 @@
         // Get or generate a unique device ID
         let deviceId = localStorage.getItem('fantasminhaDeviceId');
         if (!deviceId) {
-            deviceId = 'device-' + Math.random().toString(36).substr(2, 9) + Date.now();
+            deviceId = 'device-' + Math.random().toString(36).substring(2, 9) + Date.now();
             localStorage.setItem('fantasminhaDeviceId', deviceId);
         }
         console.log("Device ID:", deviceId);
 
+        // Referências aos elementos do DOM (agora IDs únicas)
         const toggleLocationBtn = document.getElementById('toggleLocationBtn');
         const userLocationStatus = document.getElementById('userLocationStatus');
-        const statusMessageEl = document.getElementById('statusMessage');
+        const statusMessageEl = document.getElementById('statusMessage'); // Este é o correto
         const busTitlesContainer = document.getElementById('busTitlesContainer');
+        // const warningMessageEl é obtido dentro de fetchBusLocations
 
         let isSharingLocation = false;
         let watchId = null;
-        const UPDATE_LOCATION_URL = "{% url 'public:api_update_location' %}"; // Django URL reverse
+        const UPDATE_LOCATION_URL = "{% url 'public:api_update_location' %}";
         const GET_BUS_LOCATIONS_URL = "{% url 'public:api_get_fantasminha_locations' %}";
 
         // --- Map Initialization ---
-        // Centered roughly on UFRRJ main campus
         const map = L.map('map').setView([-22.759, -43.688], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-        let busMarkers = {}; // To store L.marker objects {bus_id: marker}
+        let busMarkers = {};
 
         // --- Location Sharing Logic ---
         toggleLocationBtn.addEventListener('click', () => {
             isSharingLocation = !isSharingLocation;
             if (isSharingLocation) {
-                toggleLocationBtn.textContent = 'Desativar Compartilhamento';
-                userLocationStatus.textContent = 'Compartilhamento ativo. Obtendo localização...';
+                toggleLocationBtn.textContent = 'Desativar Localização';
+                userLocationStatus.textContent = 'Obtendo localização...';
+                userLocationStatus.className = '';
                 startWatchingLocation();
             } else {
-                toggleLocationBtn.textContent = 'Ativar Compartilhamento';
+                toggleLocationBtn.textContent = 'Ativar Localização';
                 userLocationStatus.textContent = 'Compartilhamento desativado.';
+                userLocationStatus.className = '';
                 stopWatchingLocation();
             }
         });
@@ -79,15 +77,63 @@
         function startWatchingLocation() {
             if (navigator.geolocation) {
                 watchId = navigator.geolocation.watchPosition(
-                    sendLocationToServer,
+                    handleNewPosition,
                     handleLocationError,
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0, frequency: 5000 } // Update every 5s
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             } else {
-                userLocationStatus.textContent = "Geolocalização não é suportada por este navegador.";
+                userLocationStatus.textContent = "Geolocalização não é suportada.";
+                userLocationStatus.className = 'error-status';
                 isSharingLocation = false;
-                toggleLocationBtn.textContent = 'Ativar Compartilhamento';
+                toggleLocationBtn.textContent = 'Ativar Localização';
             }
+        }
+
+        let locationSendInterval = null;
+        let lastPosition = null;
+
+        function handleNewPosition(position) {
+            lastPosition = position;
+            userLocationStatus.textContent = `Localização: Lat ${lastPosition.coords.latitude.toFixed(4)}, Lon ${lastPosition.coords.longitude.toFixed(4)}`;
+            userLocationStatus.className = 'success-status';
+
+            if (locationSendInterval === null && isSharingLocation) {
+                sendCurrentLocationToServer();
+                locationSendInterval = setInterval(() => {
+                    if (isSharingLocation) {
+                       sendCurrentLocationToServer();
+                    } else {
+                        clearInterval(locationSendInterval);
+                        locationSendInterval = null;
+                    }
+                }, 5000);
+            }
+        }
+
+        function sendCurrentLocationToServer() {
+            if (!lastPosition) return;
+
+            const { latitude, longitude } = lastPosition.coords;
+
+            fetch(UPDATE_LOCATION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // 'X-CSRFToken': '{{ csrf_token }}' // Descomente se não usar @csrf_exempt
+                },
+                body: JSON.stringify({ latitude, longitude, deviceId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status !== 'success') {
+                    console.error("Error updating location:", data.message);
+                } else {
+                    console.log("Location sent successfully");
+                }
+            })
+            .catch(error => {
+                console.error('Error sending location:', error);
+            });
         }
 
         function stopWatchingLocation() {
@@ -95,42 +141,27 @@
                 navigator.geolocation.clearWatch(watchId);
                 watchId = null;
             }
-        }
-
-        function sendLocationToServer(position) {
-            const { latitude, longitude } = position.coords;
-            userLocationStatus.textContent = `Localização: Lat ${latitude.toFixed(4)}, Lon ${longitude.toFixed(4)}`;
-
-            fetch(UPDATE_LOCATION_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Django's CSRF token would be needed if not @csrf_exempt
-                    // 'X-CSRFToken': '{{ csrf_token }}' // If using Django templating for CSRF
-                },
-                body: JSON.stringify({ latitude, longitude, deviceId })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if(data.status !== 'success') console.error("Error updating location:", data.message);
-                else console.log("Location sent successfully");
-            })
-            .catch(error => console.error('Error sending location:', error));
+            if (locationSendInterval !== null) {
+                clearInterval(locationSendInterval);
+                locationSendInterval = null;
+            }
+            lastPosition = null;
         }
 
         function handleLocationError(error) {
-            let message = "Erro ao obter localização: ";
+            let message = "Erro de localização: ";
             switch(error.code) {
                 case error.PERMISSION_DENIED: message += "Permissão negada."; break;
-                case error.POSITION_UNAVAILABLE: message += "Informação de localização indisponível."; break;
-                case error.TIMEOUT: message += "Tempo esgotado ao obter localização."; break;
+                case error.POSITION_UNAVAILABLE: message += "Localização indisponível."; break;
+                case error.TIMEOUT: message += "Tempo esgotado."; break;
                 default: message += "Erro desconhecido."; break;
             }
             userLocationStatus.textContent = message;
+            userLocationStatus.className = 'error-status';
             console.error(message, error);
-            stopWatchingLocation(); // Stop trying if there's an error
+            stopWatchingLocation();
             isSharingLocation = false;
-            toggleLocationBtn.textContent = 'Ativar Compartilhamento';
+            toggleLocationBtn.textContent = 'Ativar Localização';
         }
 
         // --- Fetching and Displaying Bus Locations ---
@@ -139,9 +170,27 @@
             .then(response => response.json())
             .then(data => {
                 statusMessageEl.textContent = data.status_message;
-                busTitlesContainer.innerHTML = ''; // Clear previous titles
+                if (data.bus_details && data.bus_details.length > 0) {
+                    statusMessageEl.className = 'success-status';
+                } else if (data.status_message && data.status_message.toLowerCase().includes("nenhum")) {
+                     statusMessageEl.className = '';
+                } else {
+                    statusMessageEl.className = '';
+                }
 
-                // Clear old markers from map
+                const warningMessageEl = document.getElementById('warningMessage');
+                if (warningMessageEl) {
+                    if (data.warning_message) {
+                        warningMessageEl.textContent = data.warning_message;
+                        warningMessageEl.style.display = 'block';
+                    } else {
+                        warningMessageEl.textContent = '';
+                        warningMessageEl.style.display = 'none';
+                    }
+                }
+
+                busTitlesContainer.innerHTML = '';
+
                 for (const id in busMarkers) {
                     map.removeLayer(busMarkers[id]);
                     delete busMarkers[id];
@@ -151,28 +200,35 @@
                     data.bus_details.forEach(bus => {
                         const titleEl = document.createElement('p');
                         titleEl.classList.add('bus-title');
-                        titleEl.textContent = bus.title;
+
+                        let pessoaTexto = bus.user_count === 1 ? "Pessoa" : "Pessoas";
+                        let tituloCompleto = `${bus.nearest_stop_name} - ${bus.user_count} ${pessoaTexto} compartilhando`;
+
+                        titleEl.textContent = tituloCompleto;
                         busTitlesContainer.appendChild(titleEl);
 
-                        // Add/Update marker on map
                         const busLatLng = [bus.latitude, bus.longitude];
+                        let popupContent = `<b>${bus.nearest_stop_name}</b><br>${bus.user_count} ${pessoaTexto} compartilhando.`;
+
                         busMarkers[bus.id] = L.marker(busLatLng)
                                               .addTo(map)
-                                              .bindPopup(`<b>${bus.nearest_stop_name || 'Fantasminha'}</b><br>Posição estimada.`);
+                                              .bindPopup(popupContent);
                     });
-                } else {
-                     // Handled by status_message, but could add more specific message here
                 }
             })
             .catch(error => {
                 console.error('Error fetching bus locations:', error);
-                statusMessageEl.textContent = "Erro ao carregar localizações dos ônibus.";
+                statusMessageEl.textContent = "Erro ao buscar localizações.";
+                statusMessageEl.className = 'error-status';
+
+                const warningMessageEl = document.getElementById('warningMessage');
+                if (warningMessageEl) {
+                    warningMessageEl.style.display = 'none';
+                }
             });
         }
-
-        // Initial fetch and periodic updates for bus locations
         fetchBusLocations();
-        setInterval(fetchBusLocations, 7000); // Fetch every 7 seconds for example
+        setInterval(fetchBusLocations, 7000);
     </script>
 </body>
 </html>

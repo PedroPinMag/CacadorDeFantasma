@@ -1,0 +1,212 @@
+/* public/static/public/css/styles.css */
+:root {
+    --font-family: 'Montserrat', sans-serif;
+
+    /* Nord Theme Inspired Palette */
+    --background-color: #2E3440; /* Polar Night - Base background */
+    --text-color: #D8DEE9;       /* Snow Storm - Primary text */
+    --text-secondary-color: #E5E9F0; /* Snow Storm - Slightly lighter text */
+
+    --primary-accent-color: #88C0D0;   /* Frost - Medium Blue for accents */
+    --secondary-accent-color: #8FBCBB; /* Frost - Lighter, slightly teal blue for hover/secondary accents */
+
+    --container-background-color: #3B4252; /* Polar Night - UI Elements, cards */
+    --container-highlight-bg: #434C5E;   /* Polar Night - Active/hover on containers */
+
+    --border-color: #4C566A;       /* Polar Night - Borders, subtle lines */
+    --button-text-color: #ECEFF4;  /* Snow Storm - Very light for text on dark buttons */
+
+    --success-color: #A3BE8C;     /* Aurora - Green */
+    --error-color: #BF616A;       /* Aurora - Red */
+
+    --shadow-color: rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+}
+
+/* Reset básico e estilos globais */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.7;
+    padding: 20px 15px; /* Padding base para mobile */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.content-wrapper {
+    width: 100%;
+    max-width: 700px; /* Largura máxima para melhor leitura */
+    margin-bottom: 30px; /* Espaço antes do mapa, se o mapa estiver fora */
+}
+
+/* Tipografia */
+h1 {
+    color: var(--text-secondary-color);
+    text-align: center;
+    font-size: 1.8rem; /* Tamanho para mobile */
+    font-weight: 600;
+    margin-bottom: 25px;
+    letter-spacing: -0.5px;
+}
+
+h2 {
+    color: var(--text-secondary-color);
+    font-size: 1.3rem; /* Tamanho para mobile */
+    font-weight: 500;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+p {
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+/* Botão de Ação Principal */
+button#toggleLocationBtn {
+    display: block;
+    width: 100%;
+    background-color: var(--primary-accent-color);
+    color: var(--background-color); /* Texto escuro no botão claro */
+    font-family: var(--font-family);
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+    margin: 25px 0;
+    box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+button#toggleLocationBtn:hover {
+    background-color: var(--secondary-accent-color);
+}
+
+button#toggleLocationBtn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+/* Mensagens de Status */
+p#userLocationStatus,
+p#statusMessage {
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin: 15px 0;
+    background-color: var(--container-background-color);
+    border-left: 4px solid var(--border-color); /* Borda padrão */
+    color: var(--text-color);
+}
+
+p.success-status {
+    border-left-color: var(--success-color);
+    background-color: var(--container-background-color); /* Mantém o fundo para consistência */
+    color: var(--success-color);
+}
+
+p.error-status {
+    border-left-color: var(--error-color);
+    background-color: var(--container-background-color);
+    color: var(--error-color);
+}
+
+/* Card de Informações dos Ônibus */
+div#busInfo {
+    background-color: var(--container-background-color);
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-top: 25px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+div#busTitlesContainer .bus-title {
+    font-size: 1rem;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary-color);
+    font-weight: 500;
+}
+
+div#busTitlesContainer .bus-title:last-child {
+    border-bottom: none;
+}
+
+/* Mapa */
+#map {
+    width: 100%;
+    max-width: 700px; /* Mesma largura máxima do content-wrapper */
+    height: 400px; /* Altura um pouco menor para telas mobile, pode ajustar */
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin: 0 auto 30px auto; /* Centraliza e adiciona margem inferior */
+    box-shadow: 0 4px 12px var(--shadow-color);
+    background-color: var(--container-highlight-bg); /* Fundo para antes do tile carregar */
+}
+
+/* Ajustes para telas um pouco maiores (tablets em modo retrato para cima) */
+@media (min-width: 600px) {
+    body {
+        padding: 30px;
+    }
+
+    h1 {
+        font-size: 2.2rem;
+        margin-bottom: 35px;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    #map {
+        height: 450px;
+    }
+}
+
+/* Ajustes para telas maiores (tablets em modo paisagem, desktops pequenos) */
+@media (min-width: 768px) {
+    .content-wrapper {
+         /* Mantém a mesma largura máxima, mas o body tem mais padding */
+    }
+
+    button#toggleLocationBtn {
+        /* Pode-se reduzir a largura se não quiser mais full-width */
+        /* width: auto; */
+        /* padding: 14px 30px; */
+    }
+
+    #map {
+        height: 500px;
+    }
+}
+
+
+p.warning-status { /* Estilo para a mensagem de aviso */
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 10px 0;
+    background-color: var(--container-background-color); /* Ou uma cor de aviso como um amarelo escuro */
+    border-left: 4px solid #EBCB8B; /* Nord Yellow (Aurora) para aviso */
+    color: #EBCB8B; /* Cor do texto do aviso */
+}
