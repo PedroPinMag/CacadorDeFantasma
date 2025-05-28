@@ -43,3 +43,9 @@ from django.shortcuts import render
 
 def fantasminha_tracker_page(request):
     return render(request, 'public/fantasminha_map.html')
+
+def about_page(request):
+    return render(request, 'public/about.html')
+
+def contact_page(request):
+    return render(request, 'public/contact.html')

@@ -1,0 +1,92 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fantasminha UFRRJ{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+    <link rel="stylesheet" href="{% static 'public/css/styles.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header class="site-header">
+        <nav class="main-nav">
+            <a href="{% url 'public:fantasminha_tracker_page' %}" class="nav-logo">Caça Fantasma</a>
+            <button class="hamburger-menu" id="hamburgerMenu" aria-label="Abrir menu" aria-expanded="false" aria-controls="navLinks">
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="{% url 'public:fantasminha_tracker_page' %}">Mapa</a></li>
+                <li><a href="{% url 'public:about_page' %}">Sobre</a></li>
+                <li><a href="{% url 'public:contact_page' %}">Contato</a></li>
+            </ul>
+        </nav>
+    </header>
+    <div class="overlay" id="overlay"></div> <main class="main-content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="site-footer-info">
+        <p><strong>Este não é um site oficial da UFRRJ.</strong> É um projeto independente desenvolvido por alunos.</p>
+        <p>&copy; {% now "Y" %} Caça Fantasma. Todos os direitos reservados.</p>
+    </footer>
+
+    <script>
+        // JavaScript for mobile menu toggle will go here
+        const hamburgerMenu = document.getElementById('hamburgerMenu');
+        const navLinks = document.getElementById('navLinks');
+        const overlay = document.getElementById('overlay');
+
+        if (hamburgerMenu && navLinks && overlay) {
+            hamburgerMenu.addEventListener('click', () => {
+                navLinks.classList.toggle('open');
+                overlay.classList.toggle('active');
+                document.body.classList.toggle('no-scroll'); // Optional: to prevent body scroll
+                const isOpened = navLinks.classList.contains('open');
+                hamburgerMenu.setAttribute('aria-expanded', isOpened);
+                if (isOpened) {
+                    hamburgerMenu.setAttribute('aria-label', 'Fechar menu');
+                } else {
+                    hamburgerMenu.setAttribute('aria-label', 'Abrir menu');
+                }
+            });
+
+            overlay.addEventListener('click', () => {
+                navLinks.classList.remove('open');
+                overlay.classList.remove('active');
+                document.body.classList.remove('no-scroll');
+                hamburgerMenu.setAttribute('aria-expanded', 'false');
+                hamburgerMenu.setAttribute('aria-label', 'Abrir menu');
+            });
+
+            // Close menu when a link is clicked (optional)
+            navLinks.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (navLinks.classList.contains('open')) {
+                        navLinks.classList.remove('open');
+                        overlay.classList.remove('active');
+                        document.body.classList.remove('no-scroll');
+                        hamburgerMenu.setAttribute('aria-expanded', 'false');
+                        hamburgerMenu.setAttribute('aria-label', 'Abrir menu');
+                    }
+                });
+            });
+        }
+    </script>
+
+    {% block extra_scripts %}
+    {% endblock %}
+</body>
+</html>

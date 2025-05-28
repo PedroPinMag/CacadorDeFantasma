@@ -1,0 +1,26 @@
+{% extends 'public/base.html' %}
+{% load static %}
+
+{% block title %}Sobre o Projeto - Fantasminha UFRRJ{% endblock %}
+
+{% block content %}
+<div class="content-wrapper static-page">
+    <h1>Sobre o Caça Fantasma</h1>
+    <p>Bem-vindo ao Caça Fantasma!</p>
+    <p>Este projeto foi desenvolvido para ajudar a comunidade da UFRRJ a localizar os ônibus internos, carinhosamente apelidados de "Fantasminhas".</p>
+    <p>Como funciona:</p>
+    <ul>
+        <li>Usuários podem optar por compartilhar anonimamente sua localização enquanto estão no Fantasminha.</li>
+        <li>O sistema agrupa essas localizações para estimar a posição atual dos ônibus.</li>
+        <li>Todos podem visualizar no mapa a localização estimada dos Fantasminhas ativos.</li>
+    </ul>
+    <p>Este é um projeto colaborativo e visa facilitar o dia a dia dos estudantes, professores e técnicos da Rural.</p>
+    <p><strong>Tecnologias utilizadas:</strong></p>
+    <ul>
+        <li>Python com Django para o backend.</li>
+        <li>HTML, CSS e JavaScript para o frontend.</li>
+        <li>Leaflet.js para a exibição do mapa interativo.</li>
+    </ul>
+    <p>Contribua, compartilhe sua localização e ajude a manter o sistema preciso!</p>
+</div>
+{% endblock %}

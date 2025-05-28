@@ -1,32 +1,35 @@
+{% extends 'public/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fantasminha UFRRJ Tracker</title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% block title %}Caça Fantasma{% endblock %}
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
-
-    <link rel="stylesheet" href="{% static 'public/css/styles.css' %}">
-</head>
-<body>
-    <div class="content-wrapper"> <h1>Localizador Fantasminha</h1>
+{% block content %}
+    <div class="content-wrapper">
+        <h1>Localizador Fantasminha</h1>
         <button id="toggleLocationBtn">Ativar Localização</button>
         <p id="userLocationStatus">Compartilhamento desativado.</p>
 
         <p id="statusMessage">Verificando...</p>
         <p id="warningMessage" class="warning-status" style="display: none;"></p>
 
-        <div id="busInfo"> <h2>Fantasminhas Ativos</h2>
+        <div class="info-notices">
+            <p><strong>Lembretes Importantes:</strong></p>
+            <ul>
+                <li>Quanto mais pessoas compartilharem sua localização, mais precisa será a informação exibida no mapa.</li>
+                <li>A localização dos Fantasminhas pode ser imprecisa. Ela é baseada nos dados fornecidos anonimamente pelos usuários e depende da qualidade do GPS de cada dispositivo.</li>
+            </ul>
+        </div>
+        <div id="busInfo">
+            <h2>Fantasminhas Ativos</h2>
             <div id="busTitlesContainer">
-                </div> </div> </div> <div id="map"></div> <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            </div>
+        </div>
+    </div>
+    <div id="map"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
 
@@ -39,12 +42,11 @@
         }
         console.log("Device ID:", deviceId);
 
-        // Referências aos elementos do DOM (agora IDs únicas)
+        // Referências aos elementos do DOM
         const toggleLocationBtn = document.getElementById('toggleLocationBtn');
         const userLocationStatus = document.getElementById('userLocationStatus');
-        const statusMessageEl = document.getElementById('statusMessage'); // Este é o correto
+        const statusMessageEl = document.getElementById('statusMessage');
         const busTitlesContainer = document.getElementById('busTitlesContainer');
-        // const warningMessageEl é obtido dentro de fetchBusLocations
 
         let isSharingLocation = false;
         let watchId = null;
@@ -52,7 +54,7 @@
         const GET_BUS_LOCATIONS_URL = "{% url 'public:api_get_fantasminha_locations' %}";
 
         // --- Map Initialization ---
-        const map = L.map('map').setView([-22.759, -43.688], 15);
+        const map = L.map('map').setView([-22.759, -43.688], 15); // Coordenadas UFRRJ Seropédica
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
@@ -98,20 +100,20 @@
             userLocationStatus.className = 'success-status';
 
             if (locationSendInterval === null && isSharingLocation) {
-                sendCurrentLocationToServer();
+                sendCurrentLocationToServer(); // Envia imediatamente ao obter a primeira posição
                 locationSendInterval = setInterval(() => {
-                    if (isSharingLocation) {
+                    if (isSharingLocation && lastPosition) { // Garante que lastPosition existe
                        sendCurrentLocationToServer();
-                    } else {
+                    } else if (!isSharingLocation) { // Limpa intervalo se o compartilhamento for desativado
                         clearInterval(locationSendInterval);
                         locationSendInterval = null;
                     }
-                }, 5000);
+                }, 5000); // Envia a cada 5 segundos
             }
         }
 
         function sendCurrentLocationToServer() {
-            if (!lastPosition) return;
+            if (!lastPosition || !deviceId) return; // Verifica se deviceId também existe
 
             const { latitude, longitude } = lastPosition.coords;
 
@@ -119,16 +121,16 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    // 'X-CSRFToken': '{{ csrf_token }}' // Descomente se não usar @csrf_exempt
+                    // 'X-CSRFToken': '{{ csrf_token }}' // Se necessário
                 },
-                body: JSON.stringify({ latitude, longitude, deviceId })
+                body: JSON.stringify({ latitude, longitude, deviceId }) // deviceId enviado
             })
             .then(response => response.json())
             .then(data => {
                 if(data.status !== 'success') {
                     console.error("Error updating location:", data.message);
                 } else {
-                    console.log("Location sent successfully");
+                    console.log("Location sent successfully at", new Date().toLocaleTimeString());
                 }
             })
             .catch(error => {
@@ -145,6 +147,8 @@
                 clearInterval(locationSendInterval);
                 locationSendInterval = null;
             }
+            // lastPosition = null; // Não zerar lastPosition imediatamente pode ser útil se quiser enviar uma última "desativação"
+            // No entanto, para este caso, zerar ao parar é mais simples.
             lastPosition = null;
         }
 
@@ -159,9 +163,11 @@
             userLocationStatus.textContent = message;
             userLocationStatus.className = 'error-status';
             console.error(message, error);
+            // Ao dar erro, parar de tentar obter e limpar o estado
             stopWatchingLocation();
             isSharingLocation = false;
             toggleLocationBtn.textContent = 'Ativar Localização';
+            userLocationStatus.textContent = 'Compartilhamento desativado devido a erro.';
         }
 
         // --- Fetching and Displaying Bus Locations ---
@@ -171,11 +177,11 @@
             .then(data => {
                 statusMessageEl.textContent = data.status_message;
                 if (data.bus_details && data.bus_details.length > 0) {
-                    statusMessageEl.className = 'success-status';
+                    statusMessageEl.className = 'success-status'; // Ou uma classe neutra se preferir
                 } else if (data.status_message && data.status_message.toLowerCase().includes("nenhum")) {
-                     statusMessageEl.className = '';
+                     statusMessageEl.className = ''; // Classe padrão/neutra
                 } else {
-                    statusMessageEl.className = '';
+                    statusMessageEl.className = ''; // Classe padrão/neutra
                 }
 
                 const warningMessageEl = document.getElementById('warningMessage');
@@ -189,11 +195,14 @@
                     }
                 }
 
-                busTitlesContainer.innerHTML = '';
+                busTitlesContainer.innerHTML = ''; // Limpa títulos antigos
 
+                // Limpa marcadores antigos do mapa
                 for (const id in busMarkers) {
-                    map.removeLayer(busMarkers[id]);
-                    delete busMarkers[id];
+                    if (busMarkers.hasOwnProperty(id)) {
+                        map.removeLayer(busMarkers[id]);
+                        delete busMarkers[id];
+                    }
                 }
 
                 if (data.bus_details && data.bus_details.length > 0) {
@@ -210,6 +219,7 @@
                         const busLatLng = [bus.latitude, bus.longitude];
                         let popupContent = `<b>${bus.nearest_stop_name}</b><br>${bus.user_count} ${pessoaTexto} compartilhando.`;
 
+                        // Cria ou atualiza o marcador
                         busMarkers[bus.id] = L.marker(busLatLng)
                                               .addTo(map)
                                               .bindPopup(popupContent);
@@ -223,12 +233,14 @@
 
                 const warningMessageEl = document.getElementById('warningMessage');
                 if (warningMessageEl) {
-                    warningMessageEl.style.display = 'none';
+                    warningMessageEl.textContent = 'Não foi possível carregar os dados dos ônibus.';
+                    warningMessageEl.style.display = 'block';
                 }
             });
         }
+
+        // Chamada inicial e intervalo para buscar localizações dos ônibus
         fetchBusLocations();
-        setInterval(fetchBusLocations, 7000);
+        setInterval(fetchBusLocations, 7000); // Atualiza a cada 7 segundos
     </script>
-</body>
-</html>
+{% endblock %}

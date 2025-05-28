@@ -1,0 +1,41 @@
+{% extends 'public/base.html' %}
+{% load static %}
+
+{% block title %}Contato{% endblock %}
+
+{% block content %}
+<div class="content-wrapper static-page">
+    <h1>Entre em Contato</h1>
+    <p>Para dúvidas, sugestões, reporte de erros ou qualquer outro assunto relacionado ao projeto <strong>Caça Fantasma</strong>, por favor, utilize um dos canais abaixo para falar com o desenvolvedor.</p>
+
+    <div class="contact-details">
+        <h2>Desenvolvedor</h2>
+        <p>
+            <strong>Pedro Pinheiro Magalhães</strong><br>
+            Aluno de Sistemas de Informação<br>
+            Instituto de Ciências Exatas (ICE) - UFRRJ
+        </p>
+
+        <h3>Canais de Contato:</h3>
+        <ul>
+            <li>
+                <strong>Email:</strong>
+                <a href="mailto:pedropinmag@ufrrj.br">pedropinmag@ufrrj.br</a>
+                (para contato direto, sugestões e feedback)
+            </li>
+            <li>
+                <strong>GitHub:</strong>
+                <a href="https://github.com/pedropinmag" target="_blank" rel="noopener noreferrer">@pedropinmag</a>
+                (para questões técnicas, visualização do código ou reporte de issues/bugs no repositório do projeto, se aplicável)
+            </li>
+            <li>
+                <strong>Instagram:</strong>
+                <a href="https://instagram.com/pedropinmag" target="_blank" rel="noopener noreferrer">@pedropinmag</a>
+                (para um contato mais informal ou para acompanhar novidades)
+            </li>
+        </ul>
+    </div>
+
+    <p class="contact-feedback-note">Seu feedback é muito valioso para a evolução e melhoria contínua do Caça Fantasma. Não hesite em entrar em contato!</p>
+</div>
+{% endblock %}
