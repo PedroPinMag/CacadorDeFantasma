@@ -1,0 +1,56 @@
+{% extends "public/base.html" %}
+{% load static %}
+
+{% block title %}Projetos Futuros - Caça Fantasma{% endblock %}
+
+{% block content %}
+<div class="page-container"> {# Você pode usar .content-wrapper aqui se quiser o max-width de 700px, ou .page-container para um layout mais flexível que pode ser estilizado via CSS #}
+    <div class="static-page"> {# Usando a classe que você já tem para páginas de conteúdo estático #}
+        <h1 class="page-main-title">Projetos Futuros: Rastreamento Dedicado com ESP32</h1>
+
+        <p>Atualmente, o sistema Caça Fantasma conta com a colaboração dos usuários para estimar a localização dos ônibus ("Fantasminhas"). Embora essa abordagem seja valiosa e participativa, podemos alcançar uma precisão e confiabilidade ainda maiores com um sistema de rastreamento dedicado instalado diretamente nos veículos. Uma excelente plataforma para isso é o microcontrolador ESP32 combinado com módulos GPS e LTE.</p>
+
+        <h2>Visão Geral da Solução com ESP32</h2>
+        <p>A ideia é equipar cada ônibus com um pequeno dispositivo baseado em ESP32 que reportará sua localização em tempo real para o nosso servidor. Isso transformaria cada Fantasminha em uma fonte direta de dados de localização, eliminando a necessidade de algoritmos de agrupamento baseados em localizações de múltiplos usuários para um mesmo ônibus.</p>
+
+        <h3>Componentes Principais:</h3>
+        <ul>
+            <li><strong>ESP32:</strong> Um microcontrolador de baixo custo, poderoso e com Wi-Fi/Bluetooth integrados. Ele será o cérebro do dispositivo de rastreamento.</li>
+            <li><strong>Módulo GPS:</strong> Como o NEO-6M ou similar, responsável por obter as coordenadas geográficas precisas (latitude e longitude) do ônibus.</li>
+            <li><strong>Módulo LTE (4G):</strong> Como o SIM7600 ou A7672, que permitirá ao dispositivo enviar os dados de GPS para o servidor usando a rede de telefonia celular. Isso garante conectividade mesmo fora do alcance de redes Wi-Fi. Requer um chip SIM com plano de dados.</li>
+            <li><strong>Fonte de Alimentação:</strong> Uma bateria adequada com circuito de gerenciamento de energia para garantir que o dispositivo funcione de forma autônoma e contínua no ônibus.</li>
+            <li><strong>Antenas:</strong> Antenas externas para GPS e LTE para melhor recepção de sinal.</li>
+        </ul>
+
+        <h3>Como Funcionaria:</h3>
+        <ol>
+            <li>O ESP32, em intervalos regulares (ex: a cada 5-15 segundos), solicita e recebe os dados de localização (latitude, longitude, velocidade, horário) do módulo GPS.</li>
+            <li>Utilizando o módulo LTE, o ESP32 estabelece uma conexão com a internet.</li>
+            <li>Os dados de localização coletados, junto com um identificador único do dispositivo (representando o ônibus específico), são enviados via requisição HTTP (POST ou GET) ou MQTT para um endpoint de API dedicado no servidor do Caça Fantasma.</li>
+            <li>No servidor, a aplicação Django recebe esses dados, valida-os e atualiza a última localização conhecida para aquele ônibus específico.</li>
+            <li>A página do mapa do Caça Fantasma então consumiria esses dados precisos para exibir a posição exata de cada ônibus.</li>
+        </ol>
+
+        <h2>Vantagens de Precisão e Confiabilidade:</h2>
+        <ul>
+            <li><strong>Precisão Aprimorada do GPS:</strong> Módulos GPS dedicados, especialmente com antenas externas, tendem a oferecer maior precisão e estabilidade de sinal do que o GPS de smartphones, que pode variar muito entre aparelhos e condições de uso.</li>
+            <li><strong>Reportes Consistentes e Regulares:</strong> O dispositivo pode ser programado para enviar atualizações em intervalos fixos e frequentes, sem depender da ação do usuário, do estado da bateria do celular dele, ou de permissões de aplicativos.</li>
+            <li><strong>Conectividade LTE Dedicada:</strong> A comunicação via LTE é geralmente mais estável e possui maior cobertura do que depender da conexão de dados móveis de cada usuário ou de redes Wi-Fi no campus.</li>
+            <li><strong>Fonte Única de Verdade por Ônibus:</strong> Cada ônibus teria seu próprio dispositivo reportando sua localização. Isso elimina a "névoa" de ter múltiplas localizações de usuários para estimar a posição de um único ônibus e remove a necessidade de algoritmos de clusterização para essa finalidade. A localização reportada seria a localização real do ônibus.</li>
+            <li><strong>Redução do "Fator Humano":</strong> O sistema não dependeria mais de usuários ativamente compartilhando sua localização, lembrando de ativar o serviço, ou tendo bateria suficiente.</li>
+            <li><strong>Dados Mais Ricos:</strong> Além de latitude e longitude, módulos GPS podem fornecer velocidade, direção, altitude e precisão do sinal, informações que poderiam ser usadas para aprimorar a experiência do usuário (ex: estimar tempo de chegada com base na velocidade).</li>
+        </ul>
+
+        <h2>Desafios e Considerações:</h2>
+        <ul>
+            <li><strong>Custo de Hardware:</strong> Aquisição dos ESP32s, módulos GPS, módulos LTE, antenas, baterias, SIM cards e planos de dados para cada ônibus.</li>
+            <li><strong>Alimentação Elétrica:</strong> Garantir uma fonte de alimentação contínua e confiável para os dispositivos nos ônibus (seja por bateria de longa duração ou conexão à elétrica do veículo).</li>
+            <li><strong>Instalação e Manutenção:</strong> Instalação física dos dispositivos nos ônibus e eventual manutenção.</li>
+            <li><strong>Desenvolvimento Embarcado:</strong> Programação do firmware para o ESP32 ler os dados do GPS e enviá-los via LTE.</li>
+            <li><strong>Segurança da API:</strong> O endpoint da API que recebe os dados dos dispositivos ESP32 precisaria ser seguro para evitar envios de dados falsos.</li>
+        </ul>
+
+        <p>Apesar dos desafios, a implementação de um sistema de rastreamento dedicado com ESP32, GPS e LTE representa um salto significativo na qualidade e precisão do serviço Caça Fantasma, oferecendo uma experiência muito superior para os usuários da UFRRJ.</p>
+    </div>
+</div>
+{% endblock %}

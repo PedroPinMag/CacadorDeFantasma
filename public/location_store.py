@@ -25,11 +25,11 @@ def get_recent_locations():
     """
     with _lock:
         current_time = datetime.now()
-        one_minute_ago = current_time - timedelta(minutes=5)
+        time_ago = current_time - timedelta(minutes=5)
 
         # Iterate over a copy of items for safe removal
         for device_id, data in list(_active_user_locations.items()):
-            if data['timestamp'] < one_minute_ago:
+            if data['timestamp'] < time_ago:
                 del _active_user_locations[device_id]
 
         # Return only the coordinates and device_id of still-active users

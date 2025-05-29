@@ -52,3 +52,6 @@ def contact_page(request):
 
 def itinerary_page(request):
     return render(request, 'public/itinerario.html')
+
+def projetos_futuros_page(request):
+    return render(request, 'public/projetos_futuros.html')

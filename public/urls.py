@@ -10,4 +10,6 @@ urlpatterns = [
     path('itinerary/', views.itinerary_page, name='itinerary_page'),         # Itinerary page
     path('api/update-location/', views.api_update_location, name='api_update_location'),
     path('api/fantasminha-locations/', views.api_get_fantasminha_locations, name='api_get_fantasminha_locations'),
+    path('projetos-futuros/', views.projetos_futuros_page, name='projetos_futuros_page'),
+
 ]
