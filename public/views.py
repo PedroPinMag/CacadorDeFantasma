@@ -49,3 +49,6 @@ def about_page(request):
 
 def contact_page(request):
     return render(request, 'public/contact.html')
+
+def itinerary_page(request):
+    return render(request, 'public/itinerario.html')

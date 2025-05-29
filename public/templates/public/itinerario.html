@@ -1,0 +1,515 @@
+{% extends "public/base.html" %}
+{% load static %}
+
+{% block title %}Horários do Ônibus - Caça Fantasma{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Estilos específicos para a interatividade da página de itinerário (versão 2) */
+    /* Estes estilos são adicionados aqui para garantir que são bem específicos e não afetam outras páginas,
+       mas também serão incluídos no styles.css principal para centralização.
+       Se preferir, remova-os daqui e use apenas os do styles.css principal. */
+
+    .itinerary-page-v2 .page-main-title {
+        color: var(--text-secondary-color);
+        text-align: center;
+        font-size: 1.7rem;
+        font-weight: 600; /* Um pouco mais de peso para o título da página */
+        margin-top: 20px;
+        margin-bottom: 35px;
+        letter-spacing: -0.5px;
+    }
+
+    .timetable-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px; /* Espaço entre os cards de horário */
+        width: 100%;
+        max-width: 650px; /* Largura dos cards de horário */
+        margin: 0 auto 30px auto; /* Centraliza e adiciona margem inferior */
+    }
+
+    .time-slot {
+        background-color: var(--container-background-color);
+        border-radius: 8px;
+        box-shadow: 0 3px 6px var(--shadow-color);
+        transition: box-shadow 0.25s ease-in-out;
+        overflow: hidden; /* Para conter os cantos arredondados com os filhos */
+    }
+
+    .time-slot:hover {
+        box-shadow: 0 5px 12px var(--shadow-color);
+    }
+
+    .time-display, .route-summary {
+        padding: 15px 20px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.2s ease-in-out;
+        user-select: none; /* Impede seleção de texto ao clicar */
+    }
+    .time-display:hover, .route-summary:hover {
+         background-color: var(--container-highlight-bg);
+    }
+
+
+    .time-display {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary-accent-color);
+    }
+
+    .time-slot .route-info {
+        border-top: 1px solid var(--border-color);
+    }
+
+    .route-summary {
+        font-size: 0.9rem;
+        color: var(--text-secondary-color);
+        font-weight: 500;
+    }
+
+    .time-slot .route-info[style*="display: block;"] .route-summary {
+        /* background-color: var(--container-highlight-bg); /* Destaque quando a rota está visível */
+    }
+
+    .toggle-indicator {
+        font-weight: bold;
+        color: var(--primary-accent-color);
+        display: inline-block;
+        transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Efeito de mola */
+        font-size: 1.1em;
+        line-height: 1;
+        margin-left: 10px;
+        width: 20px; /* Largura fixa para alinhamento */
+        text-align: center;
+    }
+
+    .time-display.expanded .time-indicator,
+    .route-summary.expanded .summary-indicator {
+        transform: rotate(135deg); /* Rotaciona para parecer um 'x' ou seta diferente */
+    }
+
+
+    .route-qualifier-inline {
+        font-size: 0.8rem;
+        font-weight: 400;
+        color: var(--text-color);
+        margin-left: 8px;
+        font-style: italic;
+    }
+
+    ul.station-list {
+        list-style: none;
+        padding: 10px 20px 15px 25px;
+        margin: 0;
+        background-color: var(--background-color); /* Fundo da lista de estações */
+        border-top: 1px solid var(--border-color);
+    }
+
+    ul.station-list li {
+        padding: 9px 0;
+        font-size: 0.9rem;
+        color: var(--text-color);
+        border-bottom: 1px dashed var(--border-color);
+        display: flex;
+        align-items: center;
+        opacity: 0; /* Para animação */
+        transform: translateY(10px); /* Para animação */
+        animation: fadeInStation 0.3s ease-out forwards;
+    }
+
+    /* Animação para os itens da lista */
+    @keyframes fadeInStation {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Aplica delay para cada item da lista aparecer em cascata */
+    /* Você precisaria de mais dessas se tiver muitas estações por rota */
+    ul.station-list li:nth-child(1) { animation-delay: 0.05s; }
+    ul.station-list li:nth-child(2) { animation-delay: 0.1s; }
+    ul.station-list li:nth-child(3) { animation-delay: 0.15s; }
+    ul.station-list li:nth-child(4) { animation-delay: 0.2s; }
+    ul.station-list li:nth-child(5) { animation-delay: 0.25s; }
+    ul.station-list li:nth-child(6) { animation-delay: 0.3s; }
+    ul.station-list li:nth-child(7) { animation-delay: 0.35s; }
+    ul.station-list li:nth-child(8) { animation-delay: 0.4s; }
+    ul.station-list li:nth-child(9) { animation-delay: 0.45s; }
+    ul.station-list li:nth-child(10) { animation-delay: 0.5s; }
+    /* Adicione mais conforme necessário */
+
+
+    ul.station-list li:last-child {
+        border-bottom: none;
+    }
+
+    ul.station-list li::before {
+        content: '🚌'; /* Ícone de ônibus */
+        /* content: '➔';  Alternativa */
+        color: var(--primary-accent-color);
+        margin-right: 12px;
+        font-size: 0.9em; /* Ajuste o tamanho do ícone */
+        line-height: 1;
+    }
+
+    /* Ajustes de responsividade para a nova lista de horários */
+    @media (max-width: 600px) {
+        .itinerary-page-v2 .page-main-title {
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+        }
+        .timetable-container {
+            gap: 8px; /* Menos espaço em telas pequenas */
+            max-width: 100%; /* Ocupa toda a largura disponível */
+        }
+        .time-display {
+            font-size: 1.1rem;
+            padding: 12px 15px;
+        }
+        .route-summary {
+            font-size: 0.85rem;
+            padding: 12px 15px;
+        }
+        ul.station-list li {
+            font-size: 0.8rem;
+        }
+         ul.station-list {
+            padding: 10px 15px 10px 20px;
+        }
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container itinerary-page-v2">
+    <h1 class="page-main-title">Horários do Ônibus Circular</h1>
+
+    <div class="timetable-container">
+
+        <div class="time-slot" data-route-id="route_0700">
+            <div class="time-display clickable">07:00 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">KM50 – P1 – ICBS – IV (HOSPITAL) – IF – IA – KM 50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_0720">
+            <div class="time-display clickable">07:20 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">KM50 – P1 – ICHS – PAT – RETA DO GINÁSIO – KM 50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_0740">
+            <div class="time-display clickable">07:40 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">KM50 – P1 – ICHS – PAT – IT – DEGEO – PETRO <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_0750">
+            <div class="time-display clickable">07:50 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">KM50 – P1 – ICHS – PAT – IT – DEGEO – PETRO <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_0820">
+            <div class="time-display clickable">08:20 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">KM50 – P1 – ICHS – PAT – IT-DEGEO – PETRO/ RETORNA PARA O PAT – ICHS – P1 – IB – IV – IF-IA <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_0940">
+            <div class="time-display clickable">09:40 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">KM50 – P1 – ICHS – PAT – IT – DEGEO – PETRO – PU <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1140">
+            <div class="time-display clickable">11:40 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">PU – PETRO – DEGEO – IT – IZ – ICHS – P1 – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1150">
+            <div class="time-display clickable">11:50 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">IA – IF – IV – ICBS – P1 – PITÁGORAS – PPG – PAT – GINÁSIO – RODOVIÁRIA-KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1240a">
+            <div class="time-display clickable">12:40 H <span class="route-qualifier-inline">(via Rodoviária)</span> <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">KM50 – P1 – PITÁGORAS – ICHS – PAT – GINÁSIO – RODOVIÁRIA – P1 – ICBS – IV – IF – IA – PU <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1240b">
+            <div class="time-display clickable">12:40 H <span class="route-qualifier-inline">(via IZ/IT)</span> <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">KM50 – PITÁGORAS – ICHS – PAT – IZ – IT – DEGEO – PETRO – PU <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1445a">
+            <div class="time-display clickable">14:45 H <span class="route-qualifier-inline">(via IA/IF)</span> <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">IA – IF – IV – IB – P1 – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1445b">
+            <div class="time-display clickable">14:45 H <span class="route-qualifier-inline">(via PETRO)</span> <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">PETRO – DEGEO – IT – IZ – PAT – ICHS – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1500">
+            <div class="time-display clickable">15:00 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">PU – PAT – ICHS – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1645a">
+            <div class="time-display clickable">16:45 H <span class="route-qualifier-inline">(via IA/IF)</span> <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">IA – IF – IV – IB – P1 – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1645b">
+            <div class="time-display clickable">16:45 H <span class="route-qualifier-inline">(via PETRO)</span> <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">PETRO – DEGEO – IT – IZ – PAT – ICHS – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1700">
+            <div class="time-display clickable">17:00 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">PU – PAT – ICHS – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_1830">
+            <div class="time-display clickable">18:30 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">PETRO – DEGEO – IT – IZ – PAT – ICHS – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_2000_multi">
+            <div class="time-display clickable">20:00 H, 20:30 H, 21:00 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">CIRCULAR – FUNDOS – P1 – GINÁSIO – PAT – ICHS – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_2000_hotel">
+            <div class="time-display clickable">20:00 H - 21:00 H <span class="route-qualifier-inline">(Hotel)</span> <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">HOTEL – IT – IZ – PAT – ICHS – P1 – KM 50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_2000_pu">
+            <div class="time-display clickable">20:00 H - 21:00 H <span class="route-qualifier-inline">(PU)</span> <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">PU – PAT – ICHS – KM 50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_2130_multi">
+            <div class="time-display clickable">21:30 H - 22:00 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">CIRCULAR – FUNDOS- P1 – GINÁSIO – PAT – ICHS – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+        <div class="time-slot" data-route-id="route_2200">
+            <div class="time-display clickable">22:00 H <span class="toggle-indicator time-indicator">+</span></div>
+            <div class="route-info" style="display: none;">
+                <p class="route-summary clickable">PU – IZ – PAT – ICHS – KM50 <span class="toggle-indicator summary-indicator">+</span></p>
+                <ul class="station-list" style="display: none;"></ul>
+            </div>
+        </div>
+
+    </div> {# Fim do timetable-container #}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stopNameMap = {
+        "KM50": "KM 50 (Ponto Final/Inicial)",
+        "P1": "P1 - Pavilhão Principal",
+        "ICBS": "ICBS - Inst. Ciências Biológicas e da Saúde",
+        "IV": "IV - Instituto de Veterinária",
+        "IV (HOSPITAL)": "IV - Instituto de Veterinária (Hospital)",
+        "IF": "IF - Instituto Florestal",
+        "IA": "IA - Instituto de Agronomia",
+        "ICHS": "ICHS / PPGs (Ciências Humanas e Sociais)",
+        "PAT": "PAT - Pavilhão de Aulas Teóricas",
+        "RETA DO GINÁSIO": "Reta do Ginásio",
+        "IT": "IT - Instituto de Tecnologia",
+        "DEGEO": "DeGeo - Departamento de Geociências",
+        "PETRO": "Petrologia (Geociências)",
+        "PU": "PU - Prefeitura Universitária",
+        "IZ": "IZ - Instituto de Zootecnia",
+        "PITÁGORAS": "Pitágoras",
+        "PPG": "PPG (Pós-Graduações)",
+        "GINÁSIO": "Ginásio",
+        "RODOVIÁRIA": "Rodoviária Universitária", // A imagem tem RODOVIÁRIA-KM50, dividi
+        "IB": "IB - Instituto de Biologia",
+        "FUNDOS": "Fundos (Região Interna)",
+        "HOTEL": "Hotel Universitário",
+        "IT-DEGEO": "IT e DeGeo",
+        "RETORNA PARA O PAT": "Retorna para PAT",
+        "CIRCULAR": "Circular (Geral)",
+        "KM 50": "KM 50 (Ponto Final/Inicial)" // Para o "KM 50" no final de algumas rotas
+    };
+
+    // Dados das estações para cada rota (data-route-id)
+    // As chaves devem corresponder aos data-route-id no HTML
+    // Os valores são arrays das SIGLAS ou nomes curtos das paradas
+    const routeStationsData = {
+        "route_0700": ["KM50", "P1", "ICBS", "IV (HOSPITAL)", "IF", "IA", "KM50"],
+        "route_0720": ["KM50", "P1", "ICHS", "PAT", "RETA DO GINÁSIO", "KM50"],
+        "route_0740": ["KM50", "P1", "ICHS", "PAT", "IT", "DEGEO", "PETRO"],
+        "route_0750": ["KM50", "P1", "ICHS", "PAT", "IT", "DEGEO", "PETRO"],
+        "route_0820": ["KM50", "P1", "ICHS", "PAT", "IT-DEGEO", "PETRO", "/", "RETORNA PARA O PAT", "ICHS", "P1", "IB", "IV", "IF", "IA"],
+        "route_0940": ["KM50", "P1", "ICHS", "PAT", "IT", "DEGEO", "PETRO", "PU"],
+        "route_1140": ["PU", "PETRO", "DEGEO", "IT", "IZ", "ICHS", "P1", "KM50"],
+        "route_1150": ["IA", "IF", "IV", "ICBS", "P1", "PITÁGORAS", "PPG", "PAT", "GINÁSIO", "RODOVIÁRIA", "KM50"],
+        "route_1240a": ["KM50", "P1", "PITÁGORAS", "ICHS", "PAT", "GINÁSIO", "RODOVIÁRIA", "P1", "ICBS", "IV", "IF", "IA", "PU"],
+        "route_1240b": ["KM50", "PITÁGORAS", "ICHS", "PAT", "IZ", "IT", "DEGEO", "PETRO", "PU"],
+        "route_1445a": ["IA", "IF", "IV", "IB", "P1", "KM50"],
+        "route_1445b": ["PETRO", "DEGEO", "IT", "IZ", "PAT", "ICHS", "KM50"],
+        "route_1500": ["PU", "PAT", "ICHS", "KM50"],
+        "route_1645a": ["IA", "IF", "IV", "IB", "P1", "KM50"],
+        "route_1645b": ["PETRO", "DEGEO", "IT", "IZ", "PAT", "ICHS", "KM50"],
+        "route_1700": ["PU", "PAT", "ICHS", "KM50"],
+        "route_1830": ["PETRO", "DEGEO", "IT", "IZ", "PAT", "ICHS", "KM50"],
+        "route_2000_multi": ["CIRCULAR", "FUNDOS", "P1", "GINÁSIO", "PAT", "ICHS", "KM50"],
+        "route_2000_hotel": ["HOTEL", "IT", "IZ", "PAT", "ICHS", "P1", "KM 50"], // Mantive "KM 50" como na imagem
+        "route_2000_pu": ["PU", "PAT", "ICHS", "KM 50"], // Mantive "KM 50" como na imagem
+        "route_2130_multi": ["CIRCULAR", "FUNDOS", "P1", "GINÁSIO", "PAT", "ICHS", "KM50"], // FUNDOS- P1 -> FUNDOS, P1
+        "route_2200": ["PU", "IZ", "PAT", "ICHS", "KM50"]
+    };
+
+    function getStationFullName(stationAbbr) {
+        const trimmedUpperAbbr = stationAbbr.trim().toUpperCase();
+
+        // Casos especiais primeiro (mais específicos)
+        if (trimmedUpperAbbr === "IV (HOSPITAL)") return stopNameMap["IV (HOSPITAL)"] || "IV - Instituto de Veterinária (Hospital)";
+        if (trimmedUpperAbbr === "IT-DEGEO") return stopNameMap["IT-DEGEO"] || "IT - Inst. de Tecnologia e DeGeo - Depto. de Geociências";
+        if (trimmedUpperAbbr === "/") return "--- Mudança de Trajeto / Retorno ---";
+        if (trimmedUpperAbbr === "RETA DO GINÁSIO") return stopNameMap["RETA DO GINÁSIO"] || "Reta do Ginásio"; // Manter como está
+        if (trimmedUpperAbbr === "KM 50") return stopNameMap["KM50"]; // Para o caso de "KM 50" com espaço
+
+        // Mapeamento geral
+        return stopNameMap[trimmedUpperAbbr] || stationAbbr.trim();
+    }
+
+    document.querySelectorAll('.time-slot').forEach(slot => {
+        const timeDisplay = slot.querySelector('.time-display.clickable');
+        const routeInfoDiv = slot.querySelector('.route-info');
+        const routeSummaryP = slot.querySelector('.route-summary.clickable');
+        const stationListUl = slot.querySelector('.station-list');
+        const routeId = slot.dataset.routeId;
+        const timeIndicator = slot.querySelector('.toggle-indicator.time-indicator');
+        const summaryIndicator = slot.querySelector('.toggle-indicator.summary-indicator');
+
+        // Expandir/recolher informações da rota ao clicar no horário
+        if (timeDisplay && routeInfoDiv) {
+            timeDisplay.addEventListener('click', () => {
+                const isCurrentlyVisible = routeInfoDiv.style.display === 'block';
+                // Fecha todas as outras rotas e listas de estações abertas
+                document.querySelectorAll('.route-info').forEach(ri => {
+                    if (ri !== routeInfoDiv) ri.style.display = 'none';
+                });
+                document.querySelectorAll('.station-list').forEach(sl => {
+                    sl.style.display = 'none';
+                });
+                document.querySelectorAll('.toggle-indicator.time-indicator').forEach(ti => {
+                    if (ti !== timeIndicator) ti.textContent = '+';
+                });
+                 document.querySelectorAll('.toggle-indicator.summary-indicator').forEach(si => {
+                    si.textContent = '+';
+                });
+
+
+                if (isCurrentlyVisible) {
+                    routeInfoDiv.style.display = 'none';
+                    if (timeIndicator) timeIndicator.textContent = '+';
+                    // Garante que a lista de estações também seja escondida
+                    if (stationListUl) stationListUl.style.display = 'none';
+                    if (summaryIndicator) summaryIndicator.textContent = '+';
+                } else {
+                    routeInfoDiv.style.display = 'block';
+                    if (timeIndicator) timeIndicator.textContent = '-';
+                    // Não mostra a lista de estações automaticamente, apenas o resumo
+                }
+            });
+        }
+
+        // Expandir/recolher lista de estações ao clicar no resumo da rota
+        if (routeSummaryP && stationListUl && routeStationsData[routeId]) {
+            routeSummaryP.addEventListener('click', (event) => {
+                event.stopPropagation(); // Impede que o clique no resumo também feche o routeInfo
+                const isCurrentlyVisible = stationListUl.style.display === 'block';
+
+                if (isCurrentlyVisible) {
+                    stationListUl.style.display = 'none';
+                    if (summaryIndicator) summaryIndicator.textContent = '+';
+                } else {
+                    stationListUl.innerHTML = ''; // Limpa antes de popular
+                    routeStationsData[routeId].forEach(stationAbbr => {
+                        const li = document.createElement('li');
+                        li.textContent = getStationFullName(stationAbbr);
+                        stationListUl.appendChild(li);
+                    });
+                    stationListUl.style.display = 'block';
+                    if (summaryIndicator) summaryIndicator.textContent = '-';
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
