@@ -21,11 +21,11 @@ def update_user_location(device_id, latitude, longitude):
 def get_recent_locations():
     """
     Returns a list of locations updated within the last minute.
-    Also prunes locations older than 5 minute.
+    Also prunes locations older than 3 minutes.
     """
     with _lock:
         current_time = datetime.now()
-        time_ago = current_time - timedelta(minutes=5)
+        time_ago = current_time - timedelta(minutes=3)
 
         # Iterate over a copy of items for safe removal
         for device_id, data in list(_active_user_locations.items()):
